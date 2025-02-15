@@ -4,12 +4,12 @@
     "icons": [
       {
         "src": "icon-192x192.png",
-        "type": "image/png",
+        "type": "https://th.bing.com/th/id/OIP.Qay8P4hJo3WpQK7tA0gArgHaHa?rs=1&pid=ImgDetMain",
         "sizes": "192x192"
       },
       {
         "src": "icon-512x512.png",
-        "type": "image/png",
+        "type": "https://th.bing.com/th/id/OIP.A1nW3aVSLrsxhIZsWKDFhwHaHa?w=200&h=200&c=7&r=0&o=5&pid=1.7",
         "sizes": "512x512"
       }
     ],
