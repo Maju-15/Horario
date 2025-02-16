@@ -22,8 +22,10 @@
         .table tbody tr:hover { background-color: #ffe0b2; transition: background-color 0.3s; }
         .extra { background-color: yellow; }
         .domingo { background-color: lightcoral; }
+        .festivo { background-color: lightgreen; }
         .fade-in { animation: fadeIn 0.5s; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
@@ -40,14 +42,51 @@
                 <input type="text" id="apellido" class="form-control" required aria-label="Apellido">
             </div>
             <div class="mb-3">
-                <label class="form-label">Fecha Entrada:</label>
-                <input type="date" id="fechaEntrada" class="form-control" required aria-label="Fecha de entrada">
-                <input type="time" id="horaEntrada" class="form-control mt-2" required aria-label="Hora de entrada">
+                <label class="form-label">Tipo de Registro:</label>
+                <select id="tipoRegistro" class="form-select" onchange="mostrarCamposSegunTipo()" required>
+                    <option value="turno">Turno Normal</option>
+                    <option value="descanso">Día de Descanso</option>
+                    <option value="permiso_no_remunerado">Permiso No Remunerado</option>
+                    <option value="dia_familia">Día de la Familia</option>
+                    <option value="licencia">Licencia</option>
+                    <option value="vacaciones">Vacaciones</option>
+                    <option value="calamidad">Permiso por Calamidad</option>
+                    <option value="incapacidad_ambulatoria">Incapacidad General Ambulatoria</option>
+                    <option value="licencia_maternidad">Licencia de Maternidad</option>
+                    <option value="licencia_paternidad">Licencia de Paternidad</option>
+                    <option value="accidente_trabajo">Incapacidad por Accidente de Trabajo</option>
+                    <option value="matrimonio">Permiso por Matrimonio</option>
+                    <option value="permiso_remunerado">Permiso Remunerado</option>
+                    <option value="licencia_no_remunerada">Licencia No Remunerada</option>
+                    <option value="licencia_luto">Licencia por Luto</option>
+                    <option value="falta_no_remunerada">Falta al Trabajo No Remunerada</option>
+                    <option value="dia_votacion">Permiso por Día de Votación</option>
+                    <option value="dia_grado">Permiso por Día de Grado</option>
+                    <option value="dia_cumpleanos">Permiso por Día de Cumpleaños</option>
+                    <option value="permiso_luto">Permiso Remunerado por Luto</option>
+                    <option value="licencia_extralegal_maternidad">Licencia Extralegal de Maternidad</option>
+                    <option value="licencia_extralegal_paternidad">Licencia Extralegal de Paternidad</option>
+                    <option value="ausentismo_no_legalizado">Ausentismo No Legalizado</option>
+                    <option value="happy_week">Happy Week</option>
+                </select>
             </div>
-            <div class="mb-3">
+            <div class="mb-3 hidden" id="campoFechaPermiso">
+                <label class="form-label">Fecha del Permiso:</label>
+                <input type="date" id="fechaPermiso" class="form-control" aria-label="Fecha del Permiso">
+            </div>
+            <div class="mb-3 hidden" id="camposTurno">
+                <label class="form-label">Fecha Entrada:</label>
+                <input type="date" id="fechaEntrada" class="form-control" aria-label="Fecha de entrada">
+                <input type="time" id="horaEntrada" class="form-control mt-2" aria-label="Hora de entrada">
+            </div>
+            <div class="mb-3 hidden" id="camposSalida">
                 <label class="form-label">Fecha Salida:</label>
-                <input type="date" id="fechaSalida" class="form-control" required aria-label="Fecha de salida">
-                <input type="time" id="horaSalida" class="form-control mt-2" required aria-label="Hora de salida">
+                <input type="date" id="fechaSalida" class="form-control" aria-label="Fecha de salida">
+                <input type="time" id="horaSalida" class="form-control mt-2" aria-label="Hora de salida">
+            </div>
+            <div class="mb-3 hidden" id="campoMotivo">
+                <label class="form-label">Motivo:</label>
+                <input type="text" id="motivo" class="form-control" aria-label="Motivo">
             </div>
             <button type="button" class="btn btn-success w-100" onclick="guardarRegistro()">Registrar</button>
         </form>
@@ -61,6 +100,8 @@
                 <tr>
                     <th>Nombre</th>
                     <th>Apellido</th>
+                    <th>Tipo</th>
+                    <th>Fecha del Permiso</th>
                     <th>Fecha Entrada</th>
                     <th>Hora Entrada</th>
                     <th>Fecha Salida</th>
@@ -69,6 +110,8 @@
                     <th>Horas Extras</th>
                     <th>Recargos Nocturnos</th>
                     <th>Domingo</th>
+                    <th>Festivo</th>
+                    <th>Motivo</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
@@ -96,6 +139,15 @@
     <script>
         let registros = JSON.parse(localStorage.getItem("registros")) || [];
 
+        // Lista de días festivos (puedes agregar más fechas)
+        const diasFestivos = [
+            "2025-03-08", "2025-03-19", "2025-03-24", "2025-04-19", "2025-04-18", "2025-05-01", "2025-05-15", "2025-06-02","2025-06-30"
+        ];
+
+        function esFestivo(fecha) {
+            return diasFestivos.includes(fecha);
+        }
+
         function mostrarNotificacion(titulo, mensaje, tipo) {
             Swal.fire({
                 title: titulo,
@@ -105,52 +157,136 @@
             });
         }
 
-        function validarFormatoHora(hora) {
-            const regex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-            return regex.test(hora);
+        function mostrarCamposSegunTipo() {
+            const tipo = document.getElementById("tipoRegistro").value;
+            const campoFechaPermiso = document.getElementById("campoFechaPermiso");
+            const camposTurno = document.getElementById("camposTurno");
+            const camposSalida = document.getElementById("camposSalida");
+            const campoMotivo = document.getElementById("campoMotivo");
+
+            if (tipo === "turno") {
+                campoFechaPermiso.classList.add("hidden");
+                camposTurno.classList.remove("hidden");
+                camposSalida.classList.remove("hidden");
+                campoMotivo.classList.add("hidden");
+            } else {
+                campoFechaPermiso.classList.remove("hidden");
+                camposTurno.classList.add("hidden");
+                camposSalida.classList.add("hidden");
+                campoMotivo.classList.remove("hidden");
+            }
         }
 
         function guardarRegistro() {
-            const nombre = document.getElementById("nombre").value.trim();
-            const apellido = document.getElementById("apellido").value.trim();
-            const fechaEntrada = document.getElementById("fechaEntrada").value;
-            const horaEntrada = document.getElementById("horaEntrada").value;
-            const fechaSalida = document.getElementById("fechaSalida").value;
-            const horaSalida = document.getElementById("horaSalida").value;
+    const nombre = document.getElementById("nombre").value.trim();
+    const apellido = document.getElementById("apellido").value.trim();
+    const tipo = document.getElementById("tipoRegistro").value;
+    const fechaPermiso = document.getElementById("fechaPermiso").value;
+    const motivo = document.getElementById("motivo").value.trim();
 
-            if (!nombre || !apellido || !fechaEntrada || !horaEntrada || !fechaSalida || !horaSalida) {
-                mostrarNotificacion("Error", "Por favor, completa todos los campos.", "error");
-                return;
-            }
+    if (!nombre || !apellido || !tipo) {
+        mostrarNotificacion("Error", "Por favor, completa todos los campos obligatorios.", "error");
+        return;
+    }
 
-            if (!validarFormatoHora(horaEntrada) || !validarFormatoHora(horaSalida)) {
-                mostrarNotificacion("Error", "Formato de hora inválido. Usa HH:MM.", "error");
-                return;
-            }
+    let registro = [nombre, apellido, tipo];
 
-            let inicio = new Date(`${fechaEntrada}T${horaEntrada}`);
-            let fin = new Date(`${fechaSalida}T${horaSalida}`);
+    if (tipo === "turno") {
+        const fechaEntrada = document.getElementById("fechaEntrada").value;
+        const horaEntrada = document.getElementById("horaEntrada").value;
+        const fechaSalida = document.getElementById("fechaSalida").value;
+        const horaSalida = document.getElementById("horaSalida").value;
 
-            if (fin <= inicio) {
-                mostrarNotificacion("Error", "La fecha y hora de salida no pueden ser anteriores o iguales a la de entrada.", "error");
-                return;
-            }
-
-            let horasTrabajadas = (fin - inicio) / (1000 * 60 * 60);
-            let extras = horasTrabajadas > 8 ? horasTrabajadas - 8 : 0;
-            let recargosNocturnos = calcularRecargosNocturnos(inicio, fin);
-            let esDomingo = inicio.getDay() === 0 ? "Sí" : "No";
-
-            let nuevoRegistro = [nombre, apellido, fechaEntrada, horaEntrada, fechaSalida, horaSalida, horasTrabajadas.toFixed(2), extras.toFixed(2), recargosNocturnos, esDomingo];
-
-            registros.push(nuevoRegistro);
-            localStorage.setItem("registros", JSON.stringify(registros));
-
-            actualizarTabla();
-            mostrarNotificacion("Éxito", "Registro guardado con éxito!", "success");
-            document.getElementById("turnoForm").reset();
+        if (!fechaEntrada || !horaEntrada || !fechaSalida || !horaSalida) {
+            mostrarNotificacion("Error", "Por favor, completa todos los campos para el turno.", "error");
+            return;
         }
 
+        let inicio = new Date(`${fechaEntrada}T${horaEntrada}`);
+        let fin = new Date(`${fechaSalida}T${horaSalida}`);
+
+        if (fin <= inicio) {
+            mostrarNotificacion("Error", "La fecha y hora de salida no pueden ser anteriores o iguales a la de entrada.", "error");
+            return;
+        }
+
+        let horasTrabajadas = (fin - inicio) / (1000 * 60 * 60);
+        let extras = horasTrabajadas > 8 ? horasTrabajadas - 8 : 0;
+        let recargosNocturnos = calcularRecargosNocturnos(inicio, fin);
+        let esDomingo = inicio.getDay() === 0 ? "Sí" : "No";
+        let esFestivoDia = esFestivo(fechaEntrada) ? "Sí" : "No";
+
+        registro.push("-", fechaEntrada, horaEntrada, fechaSalida, horaSalida, horasTrabajadas.toFixed(2), extras.toFixed(2), recargosNocturnos, esDomingo, esFestivoDia, motivo || "-");
+    } else {
+        if (!fechaPermiso) {
+            mostrarNotificacion("Error", "Por favor, completa la fecha del permiso.", "error");
+            return;
+        }
+
+        // Verificar si la fecha del permiso es domingo
+        const fecha = new Date(fechaPermiso);
+        const esDomingo = fecha.getDay() === 0 ? "Sí" : "No";
+
+        // Verificar si la fecha del permiso es festiva
+        const esFestivoDia = esFestivo(fechaPermiso) ? "Sí" : "No";
+
+        // Para registros que no son de tipo "turno", agregamos guiones en las celdas correspondientes
+        registro.push(fechaPermiso, "-", "-", "-", "-", "-", "-", "-", esDomingo, esFestivoDia, motivo || "-");
+    }
+
+    registros.push(registro); // Guardar el registro
+    localStorage.setItem("registros", JSON.stringify(registros)); // Actualizar localStorage
+
+    actualizarTabla(); // Actualizar la tabla
+    mostrarNotificacion("Éxito", "Registro guardado con éxito!", "success"); // Mostrar notificación
+    document.getElementById("turnoForm").reset(); // Limpiar el formulario
+}
+
+function actualizarTabla() {
+    let tabla = document.getElementById("tablaRegistros");
+    tabla.innerHTML = ""; // Limpiar la tabla antes de agregar los registros
+
+    registros.forEach((row, index) => {
+        let tr = document.createElement("tr");
+
+        // Agregar celdas con los datos del registro
+        row.forEach((cell, cellIndex) => {
+            let td = document.createElement("td");
+            td.textContent = cell;
+
+            // Resaltar horas extras, domingos y días festivos
+            if (cellIndex === 7 && parseFloat(cell) > 0) {
+                td.classList.add("extra");
+            }
+            if (cellIndex === 9 && cell === "Sí") {
+                td.classList.add("domingo");
+            }
+            if (cellIndex === 10 && cell === "Sí") {
+                td.classList.add("festivo");
+            }
+
+            tr.appendChild(td);
+        });
+
+        // Agregar botones de acciones (editar y eliminar)
+        let tdAcciones = document.createElement("td");
+
+        let btnEditar = document.createElement("button");
+        btnEditar.textContent = "Editar";
+        btnEditar.classList.add("btn", "btn-warning", "btn-sm", "me-2");
+        btnEditar.onclick = () => editarRegistro(index);
+        tdAcciones.appendChild(btnEditar);
+
+        let btnEliminar = document.createElement("button");
+        btnEliminar.textContent = "Eliminar";
+        btnEliminar.classList.add("btn", "btn-danger", "btn-sm");
+        btnEliminar.onclick = () => eliminarRegistro(index);
+        tdAcciones.appendChild(btnEliminar);
+
+        tr.appendChild(tdAcciones);
+        tabla.appendChild(tr);
+    });
+}
         function calcularRecargosNocturnos(inicio, fin) {
             const HORA_NOCTURNA_INICIO = 21;
             const HORA_NOCTURNA_FIN = 6;
@@ -180,21 +316,33 @@
 
         function actualizarTabla() {
             let tabla = document.getElementById("tablaRegistros");
-            tabla.innerHTML = "";
+            tabla.innerHTML = ""; // Limpiar la tabla antes de agregar los registros
 
             registros.forEach((row, index) => {
                 let tr = document.createElement("tr");
+
+                // Agregar celdas con los datos del registro
                 row.forEach((cell, cellIndex) => {
                     let td = document.createElement("td");
                     td.textContent = cell;
 
-                    if (cellIndex === 7 && parseFloat(cell) > 0) { td.classList.add("extra"); }
-                    if (cellIndex === 9 && cell === "Sí") { td.classList.add("domingo"); }
+                    // Resaltar horas extras, domingos y días festivos
+                    if (cellIndex === 7 && parseFloat(cell) > 0) {
+                        td.classList.add("extra");
+                    }
+                    if (cellIndex === 9 && cell === "Sí") {
+                        td.classList.add("domingo");
+                    }
+                    if (cellIndex === 10 && cell === "Sí") {
+                        td.classList.add("festivo");
+                    }
 
                     tr.appendChild(td);
                 });
 
+                // Agregar botones de acciones (editar y eliminar)
                 let tdAcciones = document.createElement("td");
+
                 let btnEditar = document.createElement("button");
                 btnEditar.textContent = "Editar";
                 btnEditar.classList.add("btn", "btn-warning", "btn-sm", "me-2");
@@ -216,10 +364,18 @@
             let registro = registros[index];
             document.getElementById("nombre").value = registro[0];
             document.getElementById("apellido").value = registro[1];
-            document.getElementById("fechaEntrada").value = registro[2];
-            document.getElementById("horaEntrada").value = registro[3];
-            document.getElementById("fechaSalida").value = registro[4];
-            document.getElementById("horaSalida").value = registro[5];
+            document.getElementById("tipoRegistro").value = registro[2];
+            mostrarCamposSegunTipo();
+
+            if (registro[2] === "turno") {
+                document.getElementById("fechaEntrada").value = registro[4];
+                document.getElementById("horaEntrada").value = registro[5];
+                document.getElementById("fechaSalida").value = registro[6];
+                document.getElementById("horaSalida").value = registro[7];
+            } else {
+                document.getElementById("fechaPermiso").value = registro[3];
+                document.getElementById("motivo").value = registro[13];
+            }
 
             registros.splice(index, 1);
             localStorage.setItem("registros", JSON.stringify(registros));
@@ -265,7 +421,7 @@
         function descargarExcel() {
             let wb = XLSX.utils.book_new();
             let ws = XLSX.utils.aoa_to_sheet([
-                ["Nombre", "Apellido", "Fecha Entrada", "Hora Entrada", "Fecha Salida", "Hora Salida", "Horas Trabajadas", "Horas Extras", "Recargos Nocturnos", "Domingo"]
+                ["Nombre", "Apellido", "Tipo", "Fecha del Permiso", "Fecha Entrada", "Hora Entrada", "Fecha Salida", "Hora Salida", "Horas Trabajadas", "Horas Extras", "Recargos Nocturnos", "Domingo", "Festivo", "Motivo"]
             ]);
 
             registros.forEach(registro => {
